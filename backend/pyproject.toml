@@ -1,0 +1,15 @@
+[project]
+name = "backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.18.4",
+    "fastapi>=0.135.3",
+    "google-cloud-compute>=1.40.0",
+    "httpx>=0.28.1",
+    "psycopg[binary]>=3.3.3",
+    "python-dotenv>=1.2.2",
+    "pytest>=8.4.2",
+    "sqlmodel>=0.0.38",
+    "uvicorn[standard]>=0.43.0",
+]
