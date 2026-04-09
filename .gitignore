@@ -1,0 +1,42 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual envs
+.venv/
+backend/.venv/
+
+# Node
+**/node_modules/
+**/dist/
+**/dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local env / secrets
+.env
+.env.*
+!**/.env.example
+backend/.env
+frontend/.env
+backend/firebase-service-account.json
+backend/gcs-service-account.json
+
+# Local databases / migration artifacts
+*.db
+*.sqlite
+*.sqlite3
+backend/local.db
+
+# Runtime logs
+logs/
+*.log
