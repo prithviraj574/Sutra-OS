@@ -1,20 +1,46 @@
 # Prompt Intent
 
-## Current Runtime Direction (2026-04-08)
+## Current Runtime Direction (2026-04-11)
 
 The current design direction moves from host-managed microVM orchestration toward a split control-plane/execution-plane architecture:
 
 - Tier 1 (Presentation): React UI behind Nginx.
 - Tier 2 (Control Plane on GCP): FastAPI + Hermes orchestrator handles user sessions, context hydration, model calls, tool routing, and stream fanout.
-- Tier 2 state: tenant profiles are persisted on GCP-backed disk (SQLite on Persistent Disk for now).
+- Tier 2 state: control-plane relational state lives in Postgres. Neon is the preferred dev database instead of local SQLite/Postgres-on-laptop.
+- Tier 2 filesystem: Cloud Run mounts a shared NFS/Filestore path that stores Hermes homes for many agents.
 - Tier 3 (Execution Plane on Modal): per-task sandbox execution in Modal sandboxes, with workspace state on Modal Volumes.
 - External model providers remain stateless LLM APIs (OpenRouter/Anthropic/etc.).
 
 Primary intent:
 - Keep orchestration and identity in Sutra control plane.
 - Keep code execution isolated and disposable.
-- Keep tenant state durable and scoped per profile.
+- Keep tenant state durable and scoped per agent.
 - Stream live tool output and model output back to UI with minimal latency.
+
+### Agent Storage Contract
+
+Each agent has two important filesystem paths:
+
+1. `hermes_home`
+   - The full Hermes profile root for that agent.
+   - Contains Hermes-managed state and identity files such as `memories/`, `logs/`, `skills/`, `cron/`, `sessions/`, `plans/`, starter `SOUL.md`, and supporting config/runtime files.
+   - This path is durable and mounted from the shared GCP filesystem.
+
+2. `workspace`
+   - The agent-visible working filesystem for CLI/tool execution.
+   - This is the directory exposed during terminal execution inside Modal sandboxes.
+   - It is durable through the execution plane's persistence mechanism (for example Modal persistent filesystem / volume semantics), not through the GCP NFS mount used for Hermes homes.
+   - It should be tracked separately from `hermes_home` and not assumed to live on the same underlying storage system.
+
+Control-plane relational records should point to both paths explicitly instead of inferring one from the other.
+
+### State Model
+
+- Sutra-owned application state stays in Postgres: users, agents, agent provisioning metadata, auth mappings, run metadata, and future billing/control-plane tables.
+- Hermes' own SQLite databases inside each `hermes_home` can remain in place initially as implementation-local agent state.
+- We should not block backend MVP work on replacing Hermes SQLite internals. If needed, Hermes can be patched later to support alternative backing stores or a different persistence strategy.
+- Shared NFS is for durable Hermes homes on the GCP control plane, not for replacing control-plane relational storage.
+- Terminal execution workspace persistence belongs to the Modal execution plane and should be modeled separately from Hermes home persistence.
 
 Key constraints to preserve while implementing:
 - True multi-tenancy by default (no cross-tenant workspace exposure).
@@ -35,11 +61,12 @@ graph TD
         FastAPI[FastAPI / Hermes Orchestrator]
 
         subgraph State [State Management]
-            PD[(GCP Persistent Disk)]
-            P1[Profile: Tenant A]
-            P2[Profile: Tenant B]
-            PD --- P1
-            PD --- P2
+            PG[(Postgres / Neon)]
+            NFS[(Shared NFS Hermes Homes)]
+            A1["Agent A hermes_home + workspace"]
+            A2["Agent B hermes_home + workspace"]
+            NFS --- A1
+            NFS --- A2
         end
     end
 
@@ -56,15 +83,16 @@ graph TD
     React -- "2. Routes traffic" --> Nginx
     Nginx -- "3. Forward to Backend" --> FastAPI
 
-    FastAPI -- "4. Hydrate context (SQLite)" --> P1
-    FastAPI -- "5. Outbound prompt" --> LLM
-    LLM -- "6. SSE JSON Tool Call" --> FastAPI
+    FastAPI -- "4. Load app state (Postgres)" --> PG
+    FastAPI -- "5. Resolve agent filesystem paths" --> A1
+    FastAPI -- "6. Outbound prompt" --> LLM
+    LLM -- "7. SSE JSON Tool Call" --> FastAPI
 
-    FastAPI -- "7. API: Spawn & Execute" --> Sandbox
-    Sandbox -- "8. Mounts" --> Volume
+    FastAPI -- "8. API: Spawn & Execute" --> Sandbox
+    Sandbox -- "9. Mounts workspace" --> Volume
 
-    Sandbox -- "9. Streams stdout/stderr" --> FastAPI
-    FastAPI -- "10. SSE Stream to UI" --> React
+    Sandbox -- "10. Streams stdout/stderr" --> FastAPI
+    FastAPI -- "11. SSE Stream to UI" --> React
     React -- "Renders live text" --> User
 
     classDef gcp fill:#e8f0fe,stroke:#4285f4,stroke-width:2px,color:#000;
@@ -76,6 +104,6 @@ graph TD
     class Tier_2,FastAPI gcp;
     class Tier_3,Sandbox modal;
     class Tier_1,React,Nginx react;
-    class PD,P1,P2,Volume db;
+    class PG,NFS,A1,A2,Volume db;
     class External,LLM external;
 ```

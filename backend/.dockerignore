@@ -1,0 +1,7 @@
+.venv
+.pytest_cache
+__pycache__
+.sutra
+firebase-service-account.json
+gcs-service-account.json
+*.pyc

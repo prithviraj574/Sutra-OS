@@ -1,10 +1,9 @@
-import os
 from logging.config import fileConfig
 
 from alembic import context
-from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
+from app.core.settings import get_settings
 from app.models.models import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -16,14 +15,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-load_dotenv()
-database_url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")
-if database_url:
-    if database_url.startswith("postgresql://"):
-        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
-    elif database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
-    config.set_main_option("sqlalchemy.url", database_url)
+config.set_main_option("sqlalchemy.url", get_settings().database_url)
 
 # SQLModel metadata for autogenerate support.
 target_metadata = SQLModel.metadata

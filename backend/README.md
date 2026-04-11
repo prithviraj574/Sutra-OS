@@ -1,4 +1,4 @@
-# Backend (Data Model + Hermes Import Bridge)
+# Backend (FastAPI + Data Model + Hermes Import Bridge)
 
 ## Setup
 
@@ -12,19 +12,19 @@ Copy the shared app template when starting locally:
 cp .env.example .env
 ```
 
-## Local Postgres (recommended for migrations)
+## Database
 
-```bash
-./scripts/db/up.sh
-```
+Set a single `POSTGRES_URL` in `backend/.env` (Neon recommended).
 
-Default local URL:
+## Hermes Homes
 
-```text
-postgresql+psycopg://postgres:postgres@127.0.0.1:5432/sutra
-```
+Set `SUTRA_HERMES_HOMES_ROOT` to the root of the mounted Hermes storage.
 
-You can override with `POSTGRES_URL` (or `DATABASE_URL`).
+- Local default: if unset, backend uses `backend/.sutra/hermes-homes`
+- Cloud Run + Filestore: set `SUTRA_HERMES_HOMES_ROOT=/mnt/hermes`
+- Agent homes are then created under `/mnt/hermes/.hermes/profiles/agent-<uuid>`
+
+When `SUTRA_HERMES_HOMES_ROOT` is explicitly set, the app now fails fast on startup if that path is missing or not writable. This helps catch a missing Filestore mount early instead of silently writing to the container filesystem.
 
 ## Migrations
 
@@ -67,3 +67,9 @@ from backend.app.hermes import AIAgent
 ```
 
 The bridge automatically adds the repository's `hermes-agent/` path to `sys.path`.
+
+## Run API
+
+```bash
+uvicorn app.main:app --reload --app-dir backend
+```

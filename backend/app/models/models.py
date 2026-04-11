@@ -62,6 +62,8 @@ class Agent(ModelBase, table=True):
 
     user_id: UUID = Field(foreign_key="user.id", index=True, nullable=False)
     name: str = Field(nullable=False)
+    hermes_home_path: str = Field(nullable=False)
+    workspace_key: str = Field(nullable=False, index=True)
 
 
 class AgentSandbox(ModelBase, table=True):

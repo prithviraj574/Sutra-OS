@@ -40,3 +40,5 @@ backend/local.db
 # Runtime logs
 logs/
 *.log
+
+backend/.sutra
