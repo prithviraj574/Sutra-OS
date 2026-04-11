@@ -13,6 +13,10 @@ class AgentCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
 
 
+class AuthExchangeRequest(BaseModel):
+    id_token: str = Field(min_length=1)
+
+
 class AgentResponse(BaseModel):
     id: UUID
     name: str
@@ -31,7 +35,6 @@ class AgentResponse(BaseModel):
 
 class UserResponse(BaseModel):
     id: UUID
-    firebase_uid: str
     email: str
     name: str | None
 
@@ -39,12 +42,19 @@ class UserResponse(BaseModel):
     def from_model(cls, user: User) -> "UserResponse":
         return cls(
             id=user.id,
-            firebase_uid=user.firebase_uid,
             email=user.email,
             name=user.name,
         )
 
 
 class MeResponse(BaseModel):
+    user: UserResponse
+    agents: list[AgentResponse]
+
+
+class AuthExchangeResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
     user: UserResponse
     agents: list[AgentResponse]

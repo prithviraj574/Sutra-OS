@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app.core.auth import AuthPrincipal
+from app.core.auth import ExternalAuthPrincipal
 from app.core.settings import Settings
 from app.models.models import Agent, User
 from app.services.hermes_home import ProvisionHermesHomeService
@@ -17,7 +17,7 @@ class EnsureUserService:
     def __init__(self, session: Session):
         self._session = session
 
-    def ensure(self, principal: AuthPrincipal) -> User:
+    def ensure(self, principal: ExternalAuthPrincipal) -> User:
         user = self._session.exec(
             select(User).where(User.firebase_uid == principal.firebase_uid)
         ).one_or_none()

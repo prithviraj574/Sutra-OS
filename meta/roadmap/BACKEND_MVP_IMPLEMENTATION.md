@@ -150,6 +150,12 @@ Keep routes thin and move all behavior into a few services.
 
 Normalized authenticated identity used by the app:
 
+- `user_id`
+- `email`
+- `name`
+
+For login/bootstrap we also need an external identity shape sourced from the auth provider:
+
 - `firebase_uid`
 - `email`
 - `name`
@@ -264,12 +270,15 @@ Reasoning:
 ### Step 4: Auth dependency
 
 - add a backend auth module that:
-  - validates Firebase tokens in normal mode
+  - validates Firebase tokens only at the login / token-exchange boundary
+  - enforces `email_verified`
+  - issues Sutra JWTs for normal app API access
   - supports a dev bypass path when configured
-- produce an `AuthPrincipal`
+  - produces an app-facing `AuthPrincipal`
 
 Reasoning:
 - route handlers should not know about Firebase internals
+- normal API traffic should not pay Firebase verification cost on every request
 
 ### Step 5: User upsert service
 
@@ -322,6 +331,7 @@ Reasoning:
 ### Step 10: Routes
 
 - add:
+  - `POST /auth/exchange`
   - `GET /me`
   - `GET /agents`
   - `POST /agents`

@@ -34,6 +34,10 @@ class Settings:
     firebase_service_account_json: str | None
     dev_auth_bypass: bool
     frontend_url: str | None
+    jwt_secret: str
+    jwt_issuer: str
+    jwt_audience: str
+    jwt_expiration_seconds: int
 
 
 @lru_cache(maxsize=1)
@@ -53,6 +57,11 @@ def get_settings() -> Settings:
         or os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
         or ""
     ).strip() or None
+    jwt_secret = (os.getenv("SUTRA_JWT_SECRET") or "").strip()
+    if not jwt_secret:
+        raise RuntimeError("Missing JWT secret. Set SUTRA_JWT_SECRET in backend/.env.")
+    if len(jwt_secret) < 32:
+        raise RuntimeError("SUTRA_JWT_SECRET must be at least 32 characters long.")
 
     return Settings(
         app_env=app_env,
@@ -62,4 +71,8 @@ def get_settings() -> Settings:
         firebase_service_account_json=firebase_json,
         dev_auth_bypass=os.getenv("SUTRA_DEV_AUTH_BYPASS", "false").lower() in {"1", "true", "yes"},
         frontend_url=(os.getenv("SUTRA_FRONTEND_URL") or "").strip() or None,
+        jwt_secret=jwt_secret,
+        jwt_issuer=(os.getenv("SUTRA_JWT_ISSUER") or "sutra-backend").strip(),
+        jwt_audience=(os.getenv("SUTRA_JWT_AUDIENCE") or "sutra-api").strip(),
+        jwt_expiration_seconds=max(int(os.getenv("SUTRA_JWT_EXPIRATION_SECONDS", "86400")), 60),
     )

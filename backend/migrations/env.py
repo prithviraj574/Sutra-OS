@@ -1,9 +1,9 @@
 from logging.config import fileConfig
+import os
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.core.settings import get_settings
 from app.models.models import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -15,7 +15,14 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+raw_db_url = os.getenv("POSTGRES_URL")
+if not raw_db_url:
+    raise RuntimeError("POSTGRES_URL is required for migrations.")
+if raw_db_url.startswith("postgresql://"):
+    raw_db_url = raw_db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+elif raw_db_url.startswith("postgres://"):
+    raw_db_url = raw_db_url.replace("postgres://", "postgresql+psycopg://", 1)
+config.set_main_option("sqlalchemy.url", raw_db_url)
 
 # SQLModel metadata for autogenerate support.
 target_metadata = SQLModel.metadata
