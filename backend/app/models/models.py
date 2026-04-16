@@ -66,6 +66,22 @@ class Agent(ModelBase, table=True):
     workspace_key: str = Field(nullable=False, index=True)
 
 
+class ChatThread(ModelBase, table=True):
+    __tablename__ = "chat_thread"
+    __table_args__ = (
+        UniqueConstraint("hermes_session_id", name="uq_chat_thread_hermes_session_id"),
+    )
+
+    user_id: UUID = Field(foreign_key="user.id", index=True, nullable=False)
+    agent_id: UUID = Field(foreign_key="agent.id", index=True, nullable=False)
+    title: str = Field(default="New Chat", nullable=False)
+    hermes_session_id: str = Field(nullable=False)
+    last_message_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),
+    )
+
+
 class AgentSandbox(ModelBase, table=True):
     __tablename__ = "agent_sandbox"
     __table_args__ = (

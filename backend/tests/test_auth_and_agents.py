@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+import jwt
 from sqlmodel import Session, select
 
 from app.core.auth import issue_access_token
@@ -56,6 +57,29 @@ def test_auth_exchange_same_uid_updates_user_without_duplicate_agent(
     agents = db_session.exec(select(Agent)).all()
     assert len(users) == 1
     assert len(agents) == 1
+
+
+def test_auth_exchange_accepts_jwt_like_dev_token(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    dev_jwt = jwt.encode(
+        {
+            "sub": "firebase-user-1",
+            "email": "jwt-user@example.com",
+            "name": "JWT User",
+        },
+        "dev-bypass-secret-at-least-32-chars",
+        algorithm="HS256",
+    )
+
+    payload = _exchange(client, dev_jwt)
+
+    assert payload["user"]["email"] == "jwt-user@example.com"
+    assert payload["user"]["name"] == "JWT User"
+    users = db_session.exec(select(User)).all()
+    assert len(users) == 1
+    assert users[0].firebase_uid == "firebase-user-1"
 
 
 def test_me_bootstraps_initial_agent_when_missing(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
@@ -69,6 +71,19 @@ def _external_principal_from_dev_token(token: str) -> ExternalAuthPrincipal:
     trimmed = token.strip()
     if not trimmed:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Empty dev token")
+    if trimmed.count(".") == 2:
+        try:
+            _header, payload_b64, _signature = trimmed.split(".")
+            padding = "=" * (-len(payload_b64) % 4)
+            payload_raw = base64.urlsafe_b64decode(f"{payload_b64}{padding}")
+            payload = json.loads(payload_raw.decode("utf-8"))
+            uid = str(payload.get("user_id") or payload.get("sub") or "").strip()
+            email = str(payload.get("email") or "").strip()
+            name = str(payload.get("name") or "").strip() or None
+            if uid and email:
+                return ExternalAuthPrincipal(firebase_uid=uid, email=email, name=name)
+        except (ValueError, TypeError, json.JSONDecodeError):
+            pass
     if "|" in trimmed:
         uid, email, *rest = trimmed.split("|")
         name = rest[0] if rest else None

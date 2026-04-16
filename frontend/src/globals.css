@@ -1,0 +1,65 @@
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    --primary: 173 80% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 215 25% 25%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 215 25% 15%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 173 80% 32%;
+
+    --radius: 0.75rem;
+    --radius-pill: 999px;
+    --radius-surface: calc(var(--radius) * 1.5);
+
+    --shadow-sm: 0 2px 8px -1px rgba(26, 38, 52, 0.04),
+      0 1px 2px -1px rgba(26, 38, 52, 0.02);
+    --shadow-md: 0 8px 24px -4px rgba(26, 38, 52, 0.04),
+      0 4px 10px -2px rgba(26, 38, 52, 0.02);
+    --shadow-lg: 0 12px 32px -4px rgba(26, 38, 52, 0.05),
+      0 6px 14px -2px rgba(26, 38, 52, 0.03);
+    --shadow-focus-ring: 0 0 0 3px hsla(var(--ring) / 0.18);
+
+    --font-sans: 'Manrope', 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', sans-serif;
+
+    --gradient-page:
+      radial-gradient(circle at top left, hsla(var(--primary) / 0.08), transparent 24%),
+      radial-gradient(circle at top right, hsla(var(--primary) / 0.06), transparent 20%),
+      hsl(var(--background));
+
+    --space-1: 0.75rem;
+    --space-2: 1rem;
+    --space-3: 1.5rem;
+    --space-4: 2rem;
+    --space-5: 2.5rem;
+    --space-page-x-mobile: 1rem;
+    --space-page-x-desktop: 2rem;
+    --space-page-y-mobile: 1.5rem;
+    --space-page-y-desktop: 2.5rem;
+
+    --content-max: 1080px;
+    --copy-max: 720px;
+    --touch-target-min: 44px;
+
+    --transition-standard: 160ms ease;
+
+    --status-positive: hsl(var(--primary));
+    --status-negative: hsl(12 76% 58%);
+    --status-neutral: hsl(var(--muted-foreground));
+  }
+}

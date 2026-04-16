@@ -48,6 +48,38 @@ Key constraints to preserve while implementing:
 - No hidden platform lock-in in core data model or API contracts.
 - Non-technical-user usability: login and immediately usable web flow.
 
+## Frontend Design System Direction (2026-04-16)
+
+The frontend should be structured so visual decisions are reusable and centralized instead of embedded inside individual screens.
+
+Primary intent:
+- Use `shadcn/ui` as much as possible once it is installed in the frontend.
+- Define Talaria's look through shared tokens and shared foundation classes rather than per-component hardcoded values.
+- Promote repeated visual values into the design system quickly instead of allowing one-off CSS to spread.
+
+Implementation expectations:
+- Colors, shadows, radii, spacing, transitions, gradients, font stacks, width constraints, and semantic status treatments should live in reusable tokens.
+- Shared visual patterns should be exposed through reusable classes or `shadcn` variants before adding app-specific styling.
+- Feature-level styles should compose the design system rather than redefine it.
+- The system should remain easy to migrate toward fuller `shadcn/ui` adoption without changing Talaria's visual language.
+- Mobile layouts should be treated as the default starting point, with larger-screen behavior layered on top instead of retrofitted later.
+
+## Frontend Contract Direction (2026-04-17)
+
+The frontend should be TypeScript-first across first-party application code and configuration wherever the toolchain supports it cleanly.
+
+Primary intent:
+- Avoid handwritten JavaScript in the frontend codebase for product logic.
+- Prefer generated backend contracts over manually duplicated request and response shapes.
+- Keep the frontend/backend boundary strongly typed so refactors fail fast during development.
+
+Implementation expectations:
+- Frontend source files should use TypeScript (`.ts` / `.tsx`) rather than raw JavaScript.
+- The frontend should generate its API client directly from the running FastAPI backend's OpenAPI schema (`/openapi.json`) instead of maintaining handwritten fetch contracts as the source of truth.
+- Prefer a straightforward generation pipeline using a modern OpenAPI generator such as `@hey-api/openapi-ts`, with the backend serving the live schema and the frontend regenerating SDK functions and types from that URL.
+- Generated OpenAPI models and SDK functions should be used wherever possible for request, response, and domain typing.
+- Any frontend-only types should stay minimal and be limited to UI-local state that does not exist in backend contracts.
+
 ```mermaid
 graph TD
     User((User))
