@@ -154,10 +154,12 @@ export function useTalariaApp(): TalariaAppState {
 
       try {
         await hydrateSession(session.accessToken)
-      } catch {
+      } catch (bootstrapError) {
         clearSession()
         if (!ignore) {
-          setError('Session expired. Please sign in again.')
+          setError(
+            getApiErrorMessage(bootstrapError) || 'Session expired. Please sign in again.',
+          )
           setAccessToken(null)
           setUser(null)
           setAgents([])
