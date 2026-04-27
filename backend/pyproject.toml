@@ -1,0 +1,39 @@
+[project]
+name = "agent-runtime"
+version = "0.1.0"
+description = "Pythonic FastAPI agent runtime inspired by pi-mono packages/agent and packages/ai."
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.30.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.0",
+    "jsonschema>=4.23.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agent_runtime*", "api*"]
+
+[tool.setuptools]
+py-modules = ["app"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
