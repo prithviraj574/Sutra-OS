@@ -4,10 +4,10 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -15,50 +15,50 @@ class Base(DeclarativeBase):
     pass
 
 
-class AgentSessionRecord(Base):
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+    agents: Mapped[list[Agent]] = relationship(back_populates="user")
+    sessions: Mapped[list[AgentSession]] = relationship(back_populates="user")
+
+
+class Agent(Base):
+    __tablename__ = "agents"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(160), default="Default agent")
+    system_prompt: Mapped[str] = mapped_column(Text, default="")
+    model: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    tools: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+    )
+
+    user: Mapped[User] = relationship(back_populates="agents")
+    sessions: Mapped[list[AgentSession]] = relationship(back_populates="agent")
+
+
+class AgentSession(Base):
     __tablename__ = "agent_sessions"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"), index=True)
     tenant_id: Mapped[str] = mapped_column(String(128), index=True, default="default")
-    system_prompt: Mapped[str] = mapped_column(Text, default="")
-    model: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    messages: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-
-    messages: Mapped[list[AgentMessageRecord]] = relationship(
-        back_populates="session", cascade="all, delete-orphan"
-    )
-    events: Mapped[list[AgentEventRecord]] = relationship(
-        back_populates="session", cascade="all, delete-orphan"
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
 
-
-class AgentMessageRecord(Base):
-    __tablename__ = "agent_messages"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    session_id: Mapped[str] = mapped_column(ForeignKey("agent_sessions.id"), index=True)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
-    tenant_id: Mapped[str] = mapped_column(String(128), index=True, default="default")
-    role: Mapped[str] = mapped_column(String(32), index=True)
-    payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-
-    session: Mapped[AgentSessionRecord] = relationship(back_populates="messages")
-
-
-class AgentEventRecord(Base):
-    __tablename__ = "agent_events"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    session_id: Mapped[str] = mapped_column(ForeignKey("agent_sessions.id"), index=True)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
-    tenant_id: Mapped[str] = mapped_column(String(128), index=True, default="default")
-    type: Mapped[str] = mapped_column(String(64), index=True)
-    payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-
-    session: Mapped[AgentSessionRecord] = relationship(back_populates="events")
+    user: Mapped[User] = relationship(back_populates="sessions")
+    agent: Mapped[Agent] = relationship(back_populates="sessions")
 
 
 def new_id(prefix: str) -> str:
@@ -92,3 +92,18 @@ def create_engine_and_sessionmaker(postgres_url: str) -> tuple[AsyncEngine, asyn
 async def init_db(engine: AsyncEngine) -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text("ALTER TABLE agent_sessions ADD COLUMN IF NOT EXISTS agent_id VARCHAR(64)"))
+        await conn.execute(
+            text("ALTER TABLE agent_sessions ADD COLUMN IF NOT EXISTS status VARCHAR(32) DEFAULT 'active'")
+        )
+        await conn.execute(
+            text("ALTER TABLE agent_sessions ADD COLUMN IF NOT EXISTS messages JSONB DEFAULT '[]'::jsonb")
+        )
+        await conn.execute(
+            text(
+                "ALTER TABLE agent_sessions ADD COLUMN IF NOT EXISTS updated_at "
+                "TIMESTAMP WITH TIME ZONE DEFAULT now()"
+            )
+        )
+        await conn.execute(text("ALTER TABLE agent_sessions ALTER COLUMN system_prompt DROP NOT NULL"))
+        await conn.execute(text("ALTER TABLE agent_sessions ALTER COLUMN model DROP NOT NULL"))

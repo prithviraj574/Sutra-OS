@@ -5,13 +5,13 @@ from httpx import ASGITransport, AsyncClient
 
 from app import create_app
 from agent_runtime.db import init_db
-from agent_runtime.settings import Settings
+from config import Config
 
 
 @pytest.mark.asyncio
 async def test_fastapi_session_and_non_stream_run() -> None:
     user_id = "test_user_api"
-    app = create_app(Settings())
+    app = create_app(Config())
     await init_db(app.state.engine)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -34,5 +34,5 @@ async def test_fastapi_session_and_non_stream_run() -> None:
         assert listed.status_code == 200
         assert len(listed.json()["messages"]) == len(payload["messages"])
 
-    await app.state.repository.delete_session(session_id=session_id, user_id=user_id)
+    await app.state.store.delete_session(session_id=session_id, user_id=user_id)
     await app.state.engine.dispose()

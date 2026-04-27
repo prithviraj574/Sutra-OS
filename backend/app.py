@@ -3,14 +3,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from agent_runtime.db import create_engine_and_sessionmaker, init_db
-from agent_runtime.repository import AgentRepository
-from agent_runtime.settings import Settings, get_settings
+from agent_runtime.store import AgentStore
 from api.agents import router as agent_router
+from config import Config, get_config
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
-    settings = settings or get_settings()
-    engine, sessionmaker = create_engine_and_sessionmaker(settings.postgres_url)
+def create_app(config: Config | None = None) -> FastAPI:
+    config = config or get_config()
+    engine, sessionmaker = create_engine_and_sessionmaker(config.app.postgres_url)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -20,7 +20,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Agent Runtime", lifespan=lifespan)
     app.state.engine = engine
-    app.state.settings = settings
-    app.state.repository = AgentRepository(sessionmaker)
+    app.state.config = config
+    app.state.store = AgentStore(sessionmaker)
     app.include_router(agent_router)
     return app

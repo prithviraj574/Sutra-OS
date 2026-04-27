@@ -10,21 +10,21 @@ from agent_runtime.agent import Agent
 from agent_runtime.agent.types import AgentEvent
 from agent_runtime.ai.env_keys import get_env_api_key
 from agent_runtime.ai.types import Model, UserMessage
-from agent_runtime.repository import AgentRepository
-from agent_runtime.settings import Settings
+from agent_runtime.store import AgentStore
 from agent_runtime.tools import default_tools
+from config import AgentConfig
 
 
 def now_ms() -> int:
     return int(time.time() * 1000)
 
 
-def default_model(settings: Settings) -> Model:
+def default_model(config: AgentConfig) -> Model:
     return Model(
-        id=settings.default_model,
-        name=settings.default_model,
-        api=settings.default_api,
-        provider=settings.default_provider,
+        id=config.default_model,
+        name=config.default_model,
+        api=config.default_api,
+        provider=config.default_provider,
         base_url="",
         reasoning=False,
         input=["text"],
@@ -32,55 +32,46 @@ def default_model(settings: Settings) -> Model:
 
 
 async def create_session(
-    repo: AgentRepository,
-    settings: Settings,
+    store: AgentStore,
+    config: AgentConfig,
     *,
     user_id: str,
     system_prompt: str | None,
     model: dict[str, Any] | None,
 ):
-    return await repo.create_session(
+    return await store.create_session(
         user_id=user_id,
-        system_prompt=system_prompt or settings.default_system_prompt,
-        model=model or default_model(settings).model_dump(mode="json"),
+        system_prompt=system_prompt or config.default_system_prompt,
+        model=model or default_model(config).model_dump(mode="json"),
     )
 
 
 async def run_once(
-    repo: AgentRepository,
+    store: AgentStore,
     session: Any,
     *,
     user_id: str,
     content: str,
 ) -> list[Any]:
-    emitted: list[AgentEvent] = []
-    agent = await hydrate_agent(repo, session, user_id=user_id)
-    agent.subscribe(emitted.append)
+    agent = await hydrate_agent(store, session, user_id=user_id)
     stream = agent.run([UserMessage(content=content, timestamp=now_ms())])
-    messages = await stream.result()
-    await persist_run(repo, session, user_id=user_id, messages=messages, events=emitted)
-    return messages
+    new_messages = await stream.result()
+    all_messages = [*agent.state.messages[: -len(new_messages)], *new_messages] if new_messages else agent.state.messages
+    await store.save_messages(session_id=session.id, user_id=user_id, messages=all_messages)
+    return new_messages
 
 
 async def run_sse(
-    repo: AgentRepository,
+    store: AgentStore,
     session: Any,
     *,
     user_id: str,
     content: str,
 ) -> AsyncIterator[str]:
     queue: asyncio.Queue[AgentEvent | None] = asyncio.Queue()
-    agent = await hydrate_agent(repo, session, user_id=user_id)
-    emitted: list[AgentEvent] = []
+    agent = await hydrate_agent(store, session, user_id=user_id)
 
     async def on_event(event: AgentEvent) -> None:
-        emitted.append(event)
-        await repo.append_event(
-            session_id=session.id,
-            user_id=user_id,
-            event_type=event.type,
-            payload=event.model_dump(mode="json"),
-        )
         await queue.put(event)
 
     agent.subscribe(on_event)
@@ -88,8 +79,13 @@ async def run_sse(
     async def runner() -> None:
         try:
             stream = agent.run([UserMessage(content=content, timestamp=now_ms())])
-            messages = await stream.result()
-            await repo.append_messages(session_id=session.id, user_id=user_id, messages=messages)
+            new_messages = await stream.result()
+            all_messages = (
+                [*agent.state.messages[: -len(new_messages)], *new_messages]
+                if new_messages
+                else agent.state.messages
+            )
+            await store.save_messages(session_id=session.id, user_id=user_id, messages=all_messages)
         finally:
             await queue.put(None)
 
@@ -104,32 +100,17 @@ async def run_sse(
         await task
 
 
-async def hydrate_agent(repo: AgentRepository, session: Any, *, user_id: str) -> Agent:
+async def hydrate_agent(store: AgentStore, session: Any, *, user_id: str) -> Agent:
+    agent = await store.get_agent(agent_id=session.agent_id, user_id=user_id)
+    if agent is None:
+        raise RuntimeError("Agent not found for session")
     return Agent(
-        model=Model.model_validate(session.model),
-        system_prompt=session.system_prompt,
-        messages=await repo.list_messages(session_id=session.id, user_id=user_id),
+        model=Model.model_validate(agent.model),
+        system_prompt=agent.system_prompt,
+        messages=await store.get_messages(session_id=session.id, user_id=user_id),
         tools=default_tools(),
         get_api_key=get_env_api_key,
     )
-
-
-async def persist_run(
-    repo: AgentRepository,
-    session: Any,
-    *,
-    user_id: str,
-    messages: list[Any],
-    events: list[AgentEvent],
-) -> None:
-    await repo.append_messages(session_id=session.id, user_id=user_id, messages=messages)
-    for event in events:
-        await repo.append_event(
-            session_id=session.id,
-            user_id=user_id,
-            event_type=event.type,
-            payload=event.model_dump(mode="json"),
-        )
 
 
 def to_sse(event: str, data: dict[str, Any]) -> str:

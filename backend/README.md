@@ -10,6 +10,7 @@ The runtime uses `POSTGRES_URL` from the repo `.env`. There is no SQLite fallbac
 ## Layout
 
 - `app.py`: FastAPI app factory and router composition
+- `config.py`: app infrastructure config and agent runtime defaults
 - `api/`: HTTP routers, request/response schemas, API dependencies
 - `agent_runtime/ai/`: LLM provider interface, model/message types, stream protocol
 - `agent_runtime/agent/`: stateful `Agent`, loop, tool contracts, lifecycle events
