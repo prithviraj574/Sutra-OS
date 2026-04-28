@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import asyncio
+from collections.abc import AsyncIterator, Callable
 from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 KnownApi = Literal[
@@ -24,6 +25,28 @@ ThinkingLevel = Literal["off", "minimal", "low", "medium", "high", "xhigh"]
 StopReason = Literal["stop", "length", "toolUse", "error", "aborted"]
 Transport = Literal["sse", "websocket", "auto"]
 CacheRetention = Literal["none", "short", "long"]
+
+
+class AbortSignal:
+    def __init__(self) -> None:
+        self.aborted = False
+
+    def throw_if_aborted(self) -> None:
+        if self.aborted:
+            raise asyncio.CancelledError("Request aborted")
+
+
+class AbortController:
+    def __init__(self) -> None:
+        self.signal = AbortSignal()
+
+    def abort(self) -> None:
+        self.signal.aborted = True
+
+
+class ProviderResponse(BaseModel):
+    status: int
+    headers: dict[str, str] = Field(default_factory=dict)
 
 
 class TextContent(BaseModel):
@@ -103,6 +126,8 @@ class ToolResultMessage(BaseModel):
     details: Any = None
 
 
+# Provider-facing LLM message shape. This mirrors pi-ai's Message type.
+# Agent runtime events live in agent_runtime.agent.types.AgentEvent.
 Message = UserMessage | AssistantMessage | ToolResultMessage
 
 
@@ -136,12 +161,17 @@ class Model(BaseModel):
 
 
 class StreamOptions(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     temperature: float | None = None
     max_tokens: int | None = None
     api_key: str | None = None
+    signal: AbortSignal | None = Field(default=None, exclude=True)
     transport: Transport = "sse"
     cache_retention: CacheRetention = "short"
     session_id: str | None = None
+    on_payload: Callable[[Any, Any], Any] | None = Field(default=None, exclude=True)
+    on_response: Callable[[ProviderResponse, Any], Any] | None = Field(default=None, exclude=True)
     headers: dict[str, str] = Field(default_factory=dict)
     timeout_ms: int | None = None
     max_retries: int | None = None

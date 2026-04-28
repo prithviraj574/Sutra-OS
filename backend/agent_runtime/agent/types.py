@@ -6,8 +6,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_runtime.ai.types import (
+    AbortSignal,
     AssistantMessage,
     AssistantStreamEvent,
+    AssistantMessageEventStream,
     Context,
     ImageContent,
     Message,
@@ -21,6 +23,17 @@ from agent_runtime.ai.types import (
 
 ToolExecutionMode = Literal["sequential", "parallel"]
 QueueMode = Literal["all", "one-at-a-time"]
+StreamFn = Callable[[Model, Context, StreamOptions], AssistantMessageEventStream | Awaitable[AssistantMessageEventStream]]
+
+
+class CustomAgentMessage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    role: str
+    timestamp: int | None = None
+
+
+AgentMessage = Message | CustomAgentMessage
 
 
 class AgentToolResult(BaseModel):
@@ -30,7 +43,10 @@ class AgentToolResult(BaseModel):
 
 
 ToolUpdateCallback = Callable[[AgentToolResult], None]
-ToolExecute = Callable[[str, dict[str, Any], ToolUpdateCallback | None], Awaitable[AgentToolResult]]
+ToolExecute = Callable[
+    [str, dict[str, Any], AbortSignal | None, ToolUpdateCallback | None],
+    Awaitable[AgentToolResult],
+]
 PrepareArguments = Callable[[dict[str, Any]], dict[str, Any]]
 
 
@@ -45,7 +61,7 @@ class AgentTool(ToolSpec):
 
 class AgentContext(BaseModel):
     system_prompt: str = ""
-    messages: list[Message] = Field(default_factory=list)
+    messages: list[AgentMessage] = Field(default_factory=list)
     tools: list[AgentTool] = Field(default_factory=list)
 
 
@@ -56,9 +72,9 @@ class AgentState(BaseModel):
     model: Model
     thinking_level: str = "off"
     tools: list[AgentTool] = Field(default_factory=list)
-    messages: list[Message] = Field(default_factory=list)
+    messages: list[AgentMessage] = Field(default_factory=list)
     is_streaming: bool = False
-    streaming_message: Message | None = None
+    streaming_message: AgentMessage | None = None
     pending_tool_calls: set[str] = Field(default_factory=set)
     error_message: str | None = None
 
@@ -87,11 +103,17 @@ class AfterToolCallContext(BeforeToolCallContext):
     is_error: bool
 
 
-ConvertToLlm = Callable[[list[Message]], Awaitable[list[Message]] | list[Message]]
-TransformContext = Callable[[list[Message]], Awaitable[list[Message]] | list[Message]]
-GetQueuedMessages = Callable[[], Awaitable[list[Message]] | list[Message]]
-BeforeToolCall = Callable[[BeforeToolCallContext], Awaitable[BeforeToolCallResult | None]]
-AfterToolCall = Callable[[AfterToolCallContext], Awaitable[AfterToolCallResult | None]]
+ConvertToLlm = Callable[[list[AgentMessage]], Awaitable[list[Message]] | list[Message]]
+TransformContext = Callable[[list[AgentMessage]], Awaitable[list[AgentMessage]] | list[AgentMessage]]
+GetQueuedMessages = Callable[[], Awaitable[list[AgentMessage]] | list[AgentMessage]]
+BeforeToolCall = Callable[
+    [BeforeToolCallContext, AbortSignal | None],
+    Awaitable[BeforeToolCallResult | None] | BeforeToolCallResult | None,
+]
+AfterToolCall = Callable[
+    [AfterToolCallContext, AbortSignal | None],
+    Awaitable[AfterToolCallResult | None] | AfterToolCallResult | None,
+]
 
 
 class AgentLoopConfig(StreamOptions):
@@ -110,8 +132,8 @@ class AgentLoopConfig(StreamOptions):
 
 class AgentEvent(BaseModel):
     type: str
-    message: Message | None = None
-    messages: list[Message] | None = None
+    message: AgentMessage | None = None
+    messages: list[AgentMessage] | None = None
     assistant_message_event: AssistantStreamEvent | None = None
     tool_results: list[ToolResultMessage] | None = None
     tool_call_id: str | None = None

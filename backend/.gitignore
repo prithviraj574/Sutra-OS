@@ -3,3 +3,5 @@
 *.egg-info/
 __pycache__/
 *.pyc
+firebase-service-account.json
+gcs-service-account.json

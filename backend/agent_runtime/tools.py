@@ -4,12 +4,17 @@ import time
 from typing import Any
 
 from agent_runtime.agent.types import AgentTool, AgentToolResult, ToolUpdateCallback
-from agent_runtime.ai.types import TextContent
+from agent_runtime.ai.types import AbortSignal, TextContent
 
 
 async def echo_execute(
-    tool_call_id: str, params: dict[str, Any], on_update: ToolUpdateCallback | None = None
+    tool_call_id: str,
+    params: dict[str, Any],
+    signal: AbortSignal | None = None,
+    on_update: ToolUpdateCallback | None = None,
 ) -> AgentToolResult:
+    if signal:
+        signal.throw_if_aborted()
     text = str(params.get("input", ""))
     if on_update:
         on_update(AgentToolResult(content=[TextContent(text="echo started")], details={"phase": "start"}))
@@ -17,8 +22,13 @@ async def echo_execute(
 
 
 async def current_time_execute(
-    tool_call_id: str, params: dict[str, Any], on_update: ToolUpdateCallback | None = None
+    tool_call_id: str,
+    params: dict[str, Any],
+    signal: AbortSignal | None = None,
+    on_update: ToolUpdateCallback | None = None,
 ) -> AgentToolResult:
+    if signal:
+        signal.throw_if_aborted()
     return AgentToolResult(
         content=[TextContent(text=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))],
         details={"tool_call_id": tool_call_id, "timezone": "UTC"},

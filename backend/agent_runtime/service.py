@@ -36,13 +36,16 @@ async def create_session(
     config: AgentConfig,
     *,
     user_id: str,
+    agent_id: str,
     system_prompt: str | None,
     model: dict[str, Any] | None,
 ):
     return await store.create_session(
         user_id=user_id,
+        agent_id=agent_id,
         system_prompt=system_prompt or config.default_system_prompt,
         model=model or default_model(config).model_dump(mode="json"),
+        tools=[],
     )
 
 
@@ -105,8 +108,8 @@ async def hydrate_agent(store: AgentStore, session: Any, *, user_id: str) -> Age
     if agent is None:
         raise RuntimeError("Agent not found for session")
     return Agent(
-        model=Model.model_validate(agent.model),
-        system_prompt=agent.system_prompt,
+        model=Model.model_validate(session.model),
+        system_prompt=session.system_prompt,
         messages=await store.get_messages(session_id=session.id, user_id=user_id),
         tools=default_tools(),
         get_api_key=get_env_api_key,

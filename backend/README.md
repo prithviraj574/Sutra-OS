@@ -12,9 +12,10 @@ The runtime uses `POSTGRES_URL` from the repo `.env`. There is no SQLite fallbac
 - `app.py`: FastAPI app factory and router composition
 - `config.py`: app infrastructure config and agent runtime defaults
 - `api/`: HTTP routers, request/response schemas, API dependencies
+- `database.py`: Postgres engine/session setup
+- `models.py`: SQLAlchemy models
 - `agent_runtime/ai/`: LLM provider interface, model/message types, stream protocol
 - `agent_runtime/agent/`: stateful `Agent`, loop, tool contracts, lifecycle events
-- `agent_runtime/db.py`: SQLAlchemy models and Postgres engine setup
 - `agent_runtime/service.py`: application use cases that hydrate agents and persist runs
 
 ## Run
