@@ -17,16 +17,11 @@ body {
   font-family: var(--font-sans);
   background: var(--gradient-page);
   color: hsl(var(--foreground));
-  display: flex;
-  justify-content: center;
 }
 
 #root {
+  min-height: 100vh;
   width: 100%;
-  display: flex;
-  justify-content: center;
-  padding: var(--space-page-y-mobile) var(--space-page-x-mobile)
-    calc(var(--space-page-y-mobile) + 1rem);
 }
 
 button,
@@ -142,6 +137,46 @@ select:focus-visible {
     background-color var(--transition-standard);
 }
 
+.ui-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition:
+    background-color var(--transition-standard),
+    color var(--transition-standard),
+    transform var(--transition-standard);
+}
+
+.ui-icon-button:hover {
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+}
+
+.ui-icon-button:active {
+  transform: scale(0.98);
+}
+
+.ui-icon-button--primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.ui-icon-button--primary:hover {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.ui-icon-button--quiet {
+  width: 2rem;
+  height: 2rem;
+}
+
 .ui-button-secondary:hover {
   transform: translateY(-1px);
   border-color: hsla(var(--primary) / 0.38);
@@ -186,10 +221,6 @@ select:focus-visible {
 }
 
 @media (min-width: 641px) {
-  #root {
-    padding: var(--space-page-y-desktop) var(--space-page-x-desktop)
-      calc(var(--space-page-y-desktop) + 1rem);
-  }
 }
 
 @media (min-width: 881px) {
