@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0');
+
 :root {
   color: hsl(var(--foreground));
   background: hsl(var(--background));
@@ -29,6 +31,23 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+.material-symbols-rounded {
+  direction: ltr;
+  display: inline-block;
+  font-family: 'Material Symbols Rounded';
+  font-feature-settings: 'liga';
+  font-size: 1.25rem;
+  font-style: normal;
+  font-weight: normal;
+  letter-spacing: 0;
+  line-height: 1;
+  overflow-wrap: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  -webkit-font-smoothing: antialiased;
 }
 
 button:focus-visible,
@@ -66,7 +85,7 @@ select:focus-visible {
   margin: 0;
   font-size: clamp(2.4rem, 5vw, 4.75rem);
   line-height: 0.98;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
 }
 
 .ui-text-body {
@@ -96,7 +115,7 @@ select:focus-visible {
 .ui-metric {
   font-size: 1.4rem;
   line-height: 1.2;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .ui-button-primary {
@@ -110,7 +129,7 @@ select:focus-visible {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition:
@@ -218,9 +237,6 @@ select:focus-visible {
   display: grid;
   gap: var(--space-3);
   grid-template-columns: 1fr;
-}
-
-@media (min-width: 641px) {
 }
 
 @media (min-width: 881px) {

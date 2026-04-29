@@ -24,7 +24,7 @@
 
     --radius: 0.75rem;
     --radius-pill: 999px;
-    --radius-surface: calc(var(--radius) * 1.5);
+    --radius-surface: 1.125rem;
 
     --shadow-sm: 0 2px 8px -1px rgba(26, 38, 52, 0.04),
       0 1px 2px -1px rgba(26, 38, 52, 0.02);

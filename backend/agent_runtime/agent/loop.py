@@ -471,3 +471,4 @@ def _tool_result_message(call: ToolCall, result: AgentToolResult, is_error: bool
         is_error=is_error,
         timestamp=now_ms(),
     )
+    

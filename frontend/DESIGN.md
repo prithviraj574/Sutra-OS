@@ -4,6 +4,8 @@
 
 Talaria should feel calm, light, and precise. The visual system uses Ethereal Minimalism: hierarchy is created through spacing, luminance, and soft elevation rather than borders or decorative noise.
 
+Talaria is the end-user product name. Do not label core app chrome as `Sutra-OS`, `Agent runtime`, or other internal platform terminology in the user-facing interface unless a screen is explicitly for developer/admin infrastructure.
+
 Talaria should use `shadcn/ui` as much as possible. Start from `shadcn` primitives and variants first, and only introduce custom components when the requirement cannot reasonably be met through composition or extension.
 
 ## Current Implementation Reality
